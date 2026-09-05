@@ -55,9 +55,10 @@ export default function GameCanvas({ gameState, levelData, width = 800, height =
     scene.add(rimLight)
 
     const world = new THREE.Group()
+    world.name = 'world'
     scene.add(world)
     createWorld(world, levelRef.current)
-    droneRef.current = createDrone(scene)
+    droneRef.current = createDrone(scene, rotorRef)
 
     const particles = createParticles(scene)
     const animationStart = performance.now()
@@ -127,51 +128,123 @@ export default function GameCanvas({ gameState, levelData, width = 800, height =
       </div>
     </section>
   )
+}
 
 
 function createWorld(world, levelData) {
   const cells = levelData?.grid_cells || []
   const cellColors = {
-    grass: 0x327b5d,
-    wheat: 0xa9c94b,
-    bomb: 0x713c88,
-    water: 0x176184,
-    wall: 0x475761,
+    grass: 0x54783a,
+    wheat: 0xb59b49,
+    bomb: 0x36332d,
+    water: 0x315d70,
+    wall: 0x777064,
   }
   cells.forEach((cell) => {
     const material = new THREE.MeshStandardMaterial({
       color: cellColors[cell.type] || 0x1c634e,
-      roughness: 0.76,
-      metalness: 0.08,
-      emissive: cell.type === 'wheat' ? 0x496d16 : 0x0d2a20,
-      emissiveIntensity: cell.type === 'wheat' ? 0.7 : 0.42,
+      map: createTerrainTexture(cell.type),
+      roughness: 0.95,
+      metalness: 0,
     })
     const tile = new THREE.Mesh(new THREE.BoxGeometry(TILE_SIZE * 0.94, 0.28, TILE_SIZE * 0.94), material)
     tile.position.set((cell.x - 1) * TILE_SIZE, 0.12, (cell.y - 0.5) * TILE_SIZE)
     tile.castShadow = true
     tile.receiveShadow = true
     world.add(tile)
-    const tileEdge = new THREE.LineSegments(
-      new THREE.EdgesGeometry(new THREE.BoxGeometry(TILE_SIZE * 0.94, 0.28, TILE_SIZE * 0.94)),
-      new THREE.LineBasicMaterial({ color: 0x9be4c2, transparent: true, opacity: 0.22 })
-    )
-    tileEdge.position.copy(tile.position)
-    world.add(tileEdge)
     addCellDetail(world, cell, tile.position)
   })
+  addCompass(world, cells)
   const base = new THREE.Mesh(
     new THREE.BoxGeometry(8.8, 0.45, 5.9),
-    new THREE.MeshStandardMaterial({ color: 0x101d22, roughness: 0.7, metalness: 0.25 })
+    new THREE.MeshStandardMaterial({ color: 0x3e3327, map: createTerrainTexture('soil'), roughness: 1, metalness: 0 })
   )
   base.position.y = -0.52
   base.receiveShadow = true
   world.add(base)
-  const edge = new THREE.LineSegments(
-    new THREE.EdgesGeometry(new THREE.BoxGeometry(8.8, 0.45, 5.9)),
-    new THREE.LineBasicMaterial({ color: 0x39d6dc, transparent: true, opacity: 0.35 })
-  )
-  edge.position.y = -0.52
-  world.add(edge)
+}
+
+function createTerrainTexture(type) {
+  const canvas = document.createElement('canvas')
+  canvas.width = 128
+  canvas.height = 128
+  const context = canvas.getContext('2d')
+  const palettes = {
+    grass: ['#4f7238', '#668844', '#385b2d'],
+    wheat: ['#ab8e3e', '#c3a94d', '#816f31'],
+    water: ['#315f72', '#477e92', '#234d60'],
+    bomb: ['#45433d', '#5b5548', '#292a27'],
+    soil: ['#403328', '#594633', '#2d261f'],
+  }
+  const colors = palettes[type] || palettes.grass
+  context.fillStyle = colors[0]
+  context.fillRect(0, 0, 128, 128)
+  for (let index = 0; index < 220; index += 1) {
+    context.fillStyle = colors[1 + (index % 2)]
+    context.globalAlpha = 0.28 + (index % 3) * 0.12
+    const size = type === 'water' ? 10 : 2 + (index % 5)
+    context.fillRect((index * 37) % 128, (index * 61) % 128, size, type === 'water' ? 1 : size)
+  }
+  context.globalAlpha = 1
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.wrapS = THREE.RepeatWrapping
+  texture.wrapT = THREE.RepeatWrapping
+  texture.repeat.set(1.5, 1.5)
+  return texture
+}
+
+function addCompass(world, cells) {
+  if (!cells.length) return
+  const xs = cells.map((cell) => cell.x)
+  const ys = cells.map((cell) => cell.y)
+  const centerX = ((Math.min(...xs) + Math.max(...xs)) / 2 - 1) * TILE_SIZE
+  const centerZ = ((Math.min(...ys) + Math.max(...ys)) / 2 - 0.5) * TILE_SIZE
+  const radiusX = (Math.max(...xs) - Math.min(...xs) + 2.1) * TILE_SIZE / 2
+  const radiusZ = (Math.max(...ys) - Math.min(...ys) + 2.1) * TILE_SIZE / 2
+  const markers = [
+    ['N', centerX, centerZ - radiusZ, 0xdee9ca], ['E', centerX + radiusX, centerZ, 0xe5c86e],
+    ['S', centerX, centerZ + radiusZ, 0xdee9ca], ['W', centerX - radiusX, centerZ, 0xe5c86e],
+  ]
+  markers.forEach(([label, x, z, color]) => {
+    const marker = new THREE.Group()
+    marker.position.set(x, 1.35, z)
+    const arrow = new THREE.Mesh(
+      new THREE.ConeGeometry(0.12, 0.38, 4),
+      new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.18, roughness: 0.65 }),
+    )
+    arrow.position.y = -0.26
+    marker.add(arrow)
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: createLabelTexture(label, color), transparent: true, depthTest: false }))
+    sprite.scale.set(0.58, 0.58, 1)
+    sprite.position.y = 0.1
+    marker.add(sprite)
+    world.add(marker)
+  })
+}
+
+function createLabelTexture(label, color) {
+  const canvas = document.createElement('canvas')
+  canvas.width = 96
+  canvas.height = 96
+  const context = canvas.getContext('2d')
+  context.fillStyle = '#182016'
+  context.globalAlpha = 0.82
+  context.beginPath()
+  context.arc(48, 48, 34, 0, Math.PI * 2)
+  context.fill()
+  context.globalAlpha = 1
+  context.strokeStyle = `#${color.toString(16).padStart(6, '0')}`
+  context.lineWidth = 4
+  context.stroke()
+  context.fillStyle = '#f4f4e8'
+  context.font = 'bold 45px sans-serif'
+  context.textAlign = 'center'
+  context.textBaseline = 'middle'
+  context.fillText(label, 48, 51)
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  return texture
 }
 
 function addCellDetail(world, cell, position) {
@@ -189,13 +262,13 @@ function addCellDetail(world, cell, position) {
   if (cell.type === 'bomb') {
     const bomb = new THREE.Mesh(
       new THREE.SphereGeometry(0.48, 20, 12),
-      new THREE.MeshStandardMaterial({ color: 0x17101f, emissive: 0x6d24a4, emissiveIntensity: 1.1, metalness: 0.4 })
+      new THREE.MeshStandardMaterial({ color: 0x252525, emissive: 0x421d10, emissiveIntensity: 0.25, metalness: 0.7, roughness: 0.35 })
     )
     bomb.position.set(position.x, 0.62, position.z)
     world.add(bomb)
     const ring = new THREE.Mesh(
       new THREE.TorusGeometry(0.65, 0.035, 8, 32),
-      new THREE.MeshBasicMaterial({ color: 0xff66e8, transparent: true, opacity: 0.75 })
+      new THREE.MeshBasicMaterial({ color: 0xd06b3c, transparent: true, opacity: 0.5 })
     )
     ring.rotation.x = Math.PI / 2
     ring.position.copy(bomb.position)
@@ -203,7 +276,7 @@ function addCellDetail(world, cell, position) {
   }
 }
 
-function createDrone(scene) {
+function createDrone(scene, rotorReference) {
   const drone = new THREE.Group()
   drone.name = 'drone'
   drone.scale.setScalar(1.35)
@@ -222,7 +295,7 @@ function createDrone(scene) {
   core.position.y = 0.05
   drone.add(core)
   const armMaterial = new THREE.MeshStandardMaterial({ color: 0x24424a, metalness: 0.8, roughness: 0.2 })
-  rotorRef.current = []
+  rotorReference.current = []
   ;[[-0.62, 0, -0.48], [0.62, 0, -0.48], [-0.62, 0, 0.48], [0.62, 0, 0.48]].forEach(([x, y, z]) => {
     const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.8), armMaterial)
     arm.rotation.z = Math.PI / 2
@@ -240,7 +313,7 @@ function createDrone(scene) {
       rotor.add(blade)
     })
     drone.add(rotor)
-    rotorRef.current.push(rotor)
+    rotorReference.current.push(rotor)
   })
   scene.add(drone)
   return drone
@@ -259,11 +332,4 @@ function createParticles(scene) {
   const particles = new THREE.Points(geometry, material)
   scene.add(particles)
   return particles
-}
-  return (
-    <div className="game-canvas-container">
-      <h3>Game Canvas</h3>
-      <canvas ref={canvasRef} className="game-canvas" />
-    </div>
-  )
 }

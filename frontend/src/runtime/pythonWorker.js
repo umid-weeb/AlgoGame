@@ -1,220 +1,136 @@
-/**
- * Python Runtime - Web Worker for executing user Python code with Pyodide
- * Runs in isolated Web Worker to prevent blocking UI and for security
- */
+/* global loadPyodide */
+let pyodide = null
+let initializing = null
 
-let pyodideReady = false;
-let availableFunctions = [];
+const DIRECTIONS = { NORTH: 'north', SOUTH: 'south', EAST: 'east', WEST: 'west' }
 
-/**
- * Initialize Pyodide
- */
 async function initializePyodide() {
-  if (pyodideReady) return;
+  if (pyodide) return pyodide
+  if (!initializing) {
+    initializing = (async () => {
+      importScripts('https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js')
+      pyodide = await loadPyodide({ indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/' })
+      return pyodide
+    })()
+  }
+  return initializing
+}
+
+// matrix[row][column] contains a tile type, while null represents a missing
+// tile. This makes irregular maps directly usable with Python loops and ifs.
+function matrixFromState(gameState) {
+  const cells = gameState?.cells || []
+  const maxX = Math.max(0, ...cells.map((cell) => cell.x))
+  const maxY = Math.max(0, ...cells.map((cell) => cell.y))
+  const matrix = Array.from({ length: maxY + 1 }, () => Array(maxX + 1).fill(null))
+  cells.forEach((cell) => { matrix[cell.y][cell.x] = cell.type })
+  return matrix
+}
+
+async function executeUserCode({ code, maxSteps, availableFunctions, gameState }) {
+  const runtime = await initializePyodide()
+  const allowed = new Set(availableFunctions || [])
+  const commandQueue = []
+  const output = []
+  let commandLimitReached = false
+  runtime.setStdout({ batched: (text) => output.push(text) })
+  const enqueue = (type, extra = {}) => {
+    if (commandQueue.length >= maxSteps) {
+      commandLimitReached = true
+      return
+    }
+    commandQueue.push({ type, ...extra })
+  }
+
+  const api = {
+    matrix: runtime.toPy(matrixFromState(gameState)),
+    NORTH: DIRECTIONS.NORTH, SOUTH: DIRECTIONS.SOUTH, EAST: DIRECTIONS.EAST, WEST: DIRECTIONS.WEST,
+    move: (direction) => enqueue('move', { direction: String(direction).toLowerCase() }),
+    harvest: () => enqueue('harvest'),
+    cut: () => enqueue('cut'),
+    shoot: () => enqueue('shoot'),
+    plant: (entity = 'wheat') => enqueue('plant', { entity: String(entity) }),
+    takeoff: () => enqueue('takeoff'),
+    land: () => enqueue('land'),
+    turn_left: () => enqueue('turn', { direction: 'left' }),
+    turn_right: () => enqueue('turn', { direction: 'right' }),
+    hover: () => enqueue('hover'),
+  }
+  runtime.runPython(`
+import builtins
+_dronecode_safe_builtins = {
+    name: getattr(builtins, name) for name in (
+        'abs', 'all', 'any', 'bool', 'dict', 'enumerate', 'float', 'int',
+        'len', 'list', 'max', 'min', 'range', 'reversed', 'round', 'set',
+        'print', 'sorted', 'str', 'sum', 'tuple', 'zip'
+    )
+}
+`)
+  const safeBuiltins = runtime.globals.get('_dronecode_safe_builtins')
+  const userGlobals = {
+    __builtins__: safeBuiltins,
+    matrix: api.matrix,
+    NORTH: api.NORTH, SOUTH: api.SOUTH, EAST: api.EAST, WEST: api.WEST,
+  }
+  ;['move', 'harvest', 'cut', 'shoot', 'plant', 'takeoff', 'land', 'turn_left', 'turn_right', 'hover']
+    .filter((name) => allowed.has(name))
+    .forEach((name) => { userGlobals[name] = api[name] })
 
   try {
-    importScripts('https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js');
-    const pyodide = await loadPyodide({
-      indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.23.4/full/',
-    });
-    pyodideReady = true;
-    self.pyodide = pyodide;
-    return pyodide;
+    runtime.globals.set('_student_code', code)
+    runtime.globals.set('_student_globals', runtime.toPy(userGlobals))
+    await runtime.runPythonAsync('exec(_student_code, _student_globals, _student_globals)')
+    // A lesson is a function-based exercise. The last user-defined function
+    // that accepts one argument is the entry point and receives `matrix`.
+    // Students therefore write `def any_name(matrix): ...` without a manual
+    // function call at the end of their code.
+    await runtime.runPythonAsync(`
+from types import FunctionType
+_student_entry = next(
+    (item for item in reversed(list(_student_globals.values()))
+     if isinstance(item, FunctionType) and item.__code__.co_argcount == 1),
+    None,
+)
+if _student_entry is not None:
+    _student_entry(_student_globals['matrix'])
+`)
+    if (commandLimitReached) {
+      return {
+        success: false,
+        commands: commandQueue,
+        output,
+        error: `Command limit reached: this level allows at most ${maxSteps} actions. Use a smaller loop or add a stopping condition.`,
+      }
+    }
+    return { success: true, commands: commandQueue, output, error: null }
   } catch (error) {
-    console.error('Failed to initialize Pyodide:', error);
-    self.postMessage({
-      type: 'error',
-      error: `Pyodide initialization failed: ${error.message}`,
-    });
+    return { success: false, commands: commandQueue, output, error: String(error.message || error) }
+  } finally {
+    runtime.globals.delete('_student_code')
+    runtime.globals.delete('_student_globals')
+    runtime.globals.delete('_student_entry')
+    runtime.globals.delete('_dronecode_safe_builtins')
+    safeBuiltins.destroy?.()
+    api.matrix.destroy?.()
   }
 }
 
-/**
- * Set up game API in Python
- */
-function setupGameAPI(pyodide, commandQueue) {
-  const pyCommandQueue = pyodide.toPy(commandQueue);
-
-  const gameAPI = `
-# Game API for DroneCode
-import json
-
-# Direction constants
-NORTH = 'north'
-SOUTH = 'south'
-EAST = 'east'
-WEST = 'west'
-
-# Command queue for game commands
-_command_queue = []
-_execution_state = {'steps': 0, 'max_steps': 1000}
-
-def move(direction):
-    """Move drone in specified direction"""
-    _command_queue.append({'type': 'move', 'direction': direction})
-
-def harvest():
-    """Harvest wheat at current position"""
-    _command_queue.append({'type': 'harvest'})
-
-def cut():
-    """Cut tree/bush at current position"""
-    _command_queue.append({'type': 'cut'})
-
-def shoot():
-    """Shoot in facing direction"""
-    _command_queue.append({'type': 'shoot'})
-
-def plant(entity='wheat'):
-    """Plant entity at current position"""
-    _command_queue.append({'type': 'plant', 'entity': entity})
-
-def get_position():
-    """Get current drone position (returns dict)"""
-    return {'x': 0, 'y': 0}  # Will be updated by JS
-
-def get_facing():
-    """Get current drone facing direction"""
-    return 'east'  # Will be updated by JS
-
-def get_health():
-    """Get current health/lives"""
-    return 3  # Will be updated by JS
-
-def get_commands():
-    """Get command queue for execution"""
-    return _command_queue
-
-def clear_commands():
-    """Clear command queue"""
-    global _command_queue
-    _command_queue = []
-`;
-
-  pyodide.runPython(gameAPI);
-}
-
-/**
- * Execute user code
- */
-async function executeUserCode(code, maxSteps, availableFuncs) {
-  if (!pyodideReady) {
-    await initializePyodide();
-  }
-
-  const pyodide = self.pyodide;
-  const commandQueue = [];
-
+self.onmessage = async ({ data }) => {
   try {
-    // Setup game API
-    setupGameAPI(pyodide, commandQueue);
-
-    // Filter available functions and make them callable
-    const restrictedAPI = availableFuncs.join(',');
-    const validationCode = `
-allowed_functions = set('${restrictedAPI}'.split(','))
-
-import sys
-
-class RestrictedExecution:
-    def __init__(self):
-        self.command_queue = []
-        self.step_count = 0
-        self.max_steps = ${maxSteps}
-    
-    def check_allowed(self, func_name):
-        if func_name not in allowed_functions:
-            raise NameError(f"Function '{func_name}' is not available in this level")
-
-execution_context = RestrictedExecution()
-`;
-    pyodide.runPython(validationCode);
-
-    // Execute user code with timeout and step limit
-    const executionCode = `
-execution_context.command_queue = []
-try:
-    exec('''${code.replace(/'/g, "\\'")}''', {
-        'move': move,
-        'harvest': harvest,
-        'cut': cut,
-        'shoot': shoot,
-        'plant': plant,
-        'get_position': get_position,
-        'get_facing': get_facing,
-        'get_health': get_health,
-        'NORTH': NORTH,
-        'SOUTH': SOUTH,
-        'EAST': EAST,
-        'WEST': WEST,
-    })
-    result_commands = _command_queue
-    result_error = None
-except Exception as e:
-    result_commands = _command_queue
-    result_error = str(type(e).__name__) + ': ' + str(e)
-`;
-
-    pyodide.runPython(executionCode);
-
-    const resultCommands = pyodide.globals.get('result_commands').toJs();
-    const resultError = pyodide.globals.get('result_error');
-
-    // Clean up
-    pyodide.globals.delete('result_commands');
-    pyodide.globals.delete('result_error');
-
-    return {
-      success: !resultError,
-      commands: resultCommands || [],
-      error: resultError || null,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      commands: [],
-      error: error.message || String(error),
-    };
-  }
-}
-
-/**
- * Message handler for web worker
- */
-self.onmessage = async (event) => {
-  const { type, payload } = event.data;
-
-  try {
-    switch (type) {
-      case 'init':
-        await initializePyodide();
-        self.postMessage({ type: 'ready' });
-        break;
-
-      case 'execute':
-        const result = await executeUserCode(
-          payload.code,
-          payload.maxSteps || 1000,
-          payload.availableFunctions || []
-        );
-        self.postMessage({
-          type: 'execution_complete',
-          result,
-          executionId: payload.executionId,
-        });
-        break;
-
-      default:
-        self.postMessage({ type: 'error', error: `Unknown message type: ${type}` });
+    if (data.type === 'init') {
+      await initializePyodide()
+      self.postMessage({ type: 'ready' })
+      return
+    }
+    if (data.type === 'execute') {
+      const result = await executeUserCode(data.payload)
+      self.postMessage({ type: 'execution_complete', executionId: data.payload.executionId, result })
     }
   } catch (error) {
     self.postMessage({
-      type: 'error',
-      error: error.message || String(error),
-      executionId: event.data.payload?.executionId,
-    });
+      type: 'execution_complete',
+      executionId: data.payload?.executionId,
+      result: { success: false, commands: [], error: String(error.message || error) },
+    })
   }
-};
-
-// Initialize on worker start
-initializePyodide();
+}

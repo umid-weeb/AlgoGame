@@ -41,10 +41,10 @@ function App() {
           ],
           drone_start: { x: 0, y: 0, facing: 'east' },
           available_functions: ['move', 'takeoff', 'land', 'turn_left', 'turn_right', 'hover', 'harvest', 'cut', 'shoot', 'plant'],
-          starter_code: 'def harvest_route():\n    takeoff()\n    move(EAST)\n    harvest()\n    move(EAST)\n    harvest()\n    land()\n\nharvest_route()',
+          starter_code: "def harvest_route(matrix):\n    # Function automatically receives the map; do not call it below.\n    takeoff()\n    for column in range(1, len(matrix[0])):\n        move(EAST)\n        land()\n        if matrix[0][column] == 'wheat':\n            harvest()\n        takeoff()\n    land()",
           win_condition: { type: 'all_wheat_harvested' },
           max_lives: 3,
-          max_steps: 50,
+          max_steps: 1000,
           stars_thresholds: { '10': 3, '20': 2, '50': 1 },
         }
 
@@ -91,9 +91,11 @@ function App() {
       const result = await runtimeManager.executeCode(
         code,
         level.max_steps,
-        level.available_functions
+        level.available_functions,
+        gameEngine.getState()
       )
 
+      const output = (result.output || []).map((line) => `› ${line}`)
       if (!result.success) {
         setError(result.error)
         gameEngine.addError(result.error)
@@ -116,7 +118,7 @@ function App() {
 
       // Final state update
       setGameState(gameEngine.getState())
-      setExecutionLog(gameEngine.log)
+      setExecutionLog([...output, ...gameEngine.log])
     } catch (err) {
       setError(`Execution error: ${err.message}`)
       console.error(err)
@@ -129,6 +131,7 @@ function App() {
    * Stop execution
    */
   const handleStop = () => {
+    runtimeManager?.stop()
     if (gameEngine) {
       gameEngine.loseGame()
       setGameState(gameEngine.getState())
@@ -172,27 +175,23 @@ function App() {
       <main className="app-main">
         <div className="left-panel">
           <div className="panel-heading">
-            <div>
-              <span className="eyebrow">MISSION CONTROL</span>
-              <span className="panel-hint">Write your flight plan</span>
-            </div>
             <button className="info-button" type="button" onClick={() => setShowFlightInfo(true)}>
               <span>i</span> Info
             </button>
           </div>
-        <GameToolbar
-          isRunning={isRunning}
-          runtimeReady={runtimeReady}
-          onRun={handleRun}
-          onStop={handleStop}
-          onRestart={handleRestart}
-        />
         <CodeEditor
           value={code}
           onChange={setCode}
-          language="python"
-          availableFunctions={level?.available_functions || []}
           disabled={isRunning}
+          toolbar={(
+            <GameToolbar
+              isRunning={isRunning}
+              runtimeReady={runtimeReady}
+              onRun={handleRun}
+              onStop={handleStop}
+              onRestart={handleRestart}
+            />
+          )}
         />
           <div className="editor-footer">
             <span>Python 3</span>

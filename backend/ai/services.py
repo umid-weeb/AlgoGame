@@ -117,19 +117,90 @@ def parse_json_response(text):
 
 
 def validate_challenge(payload):
+    """Validate untrusted model output before an admin can approve it.
+
+    This intentionally validates game rules locally instead of trusting a model
+    claim that a level is solvable.
+    """
+    if not isinstance(payload, dict):
+        return ['AI response must be a JSON object.']
+
     required = ('title', 'grid_cells', 'drone_start', 'available_functions', 'starter_code', 'win_condition', 'max_lives', 'max_steps')
     errors = [f'Missing field: {field}' for field in required if field not in payload]
     cells = payload.get('grid_cells', [])
     if not isinstance(cells, list) or not cells:
         errors.append('grid_cells must be a non-empty list.')
+        return errors
+
     allowed_types = {'grass', 'wheat', 'tree', 'bush', 'rock', 'water', 'wall', 'bomb'}
+    coordinates = set()
     for cell in cells:
-        if not isinstance(cell, dict) or cell.get('type') not in allowed_types:
+        if not isinstance(cell, dict) or cell.get('type') not in allowed_types or not isinstance(cell.get('x'), int) or not isinstance(cell.get('y'), int):
             errors.append('Every grid cell must have a supported type.')
             break
+        coordinate = (cell['x'], cell['y'])
+        if coordinate in coordinates:
+            errors.append(f'Duplicate grid cell at {coordinate}.')
+            break
+        coordinates.add(coordinate)
+
+    drone = payload.get('drone_start', {})
+    if not isinstance(drone, dict) or (drone.get('x'), drone.get('y')) not in coordinates:
+        errors.append('drone_start must be on an existing grid cell.')
+    elif drone.get('facing') not in {'north', 'south', 'east', 'west'}:
+        errors.append('drone_start.facing must be north, south, east, or west.')
+
     functions = payload.get('available_functions', [])
     if not isinstance(functions, list) or 'move' not in functions:
         errors.append('available_functions must include move.')
+    if not isinstance(payload.get('starter_code', ''), str):
+        errors.append('starter_code must be a string.')
+    if not isinstance(payload.get('max_lives'), int) or payload.get('max_lives', 0) < 1:
+        errors.append('max_lives must be at least 1.')
+    if not isinstance(payload.get('max_steps'), int) or payload.get('max_steps', 0) < 1:
+        errors.append('max_steps must be at least 1.')
+
+    condition = payload.get('win_condition', {})
+    condition_type = condition.get('type') if isinstance(condition, dict) else None
+    valid_conditions = {'all_wheat_harvested', 'all_bombs_destroyed', 'reach_position', 'survive_n_steps'}
+    if condition_type not in valid_conditions:
+        errors.append('win_condition.type is unsupported.')
+    if condition_type == 'all_wheat_harvested' and not any(isinstance(cell, dict) and cell.get('type') == 'wheat' for cell in cells):
+        errors.append('Harvest objective requires at least one wheat tile.')
+    if condition_type == 'all_bombs_destroyed' and not any(isinstance(cell, dict) and cell.get('type') == 'bomb' for cell in cells):
+        errors.append('Bomb objective requires at least one bomb tile.')
+    if condition_type == 'reach_position' and (condition.get('x'), condition.get('y')) not in coordinates:
+        errors.append('reach_position target must be on an existing grid cell.')
+    if condition_type == 'survive_n_steps' and (not isinstance(condition.get('steps'), int) or condition['steps'] < 1):
+        errors.append('survive_n_steps requires a positive steps value.')
+
+    # Traverse only tiles a drone can occupy. Missing cells represent holes in
+    # an irregular puzzle map and are deliberately not traversable.
+    blocked = {'water', 'wall', 'rock'}
+    by_coordinate = {
+        (cell['x'], cell['y']): cell['type']
+        for cell in cells
+        if isinstance(cell, dict) and isinstance(cell.get('x'), int) and isinstance(cell.get('y'), int) and cell.get('type') in allowed_types
+    }
+    start = (drone.get('x'), drone.get('y')) if isinstance(drone, dict) else None
+    reachable = set()
+    if start in by_coordinate and by_coordinate[start] not in blocked:
+        frontier = [start]
+        reachable.add(start)
+        while frontier:
+            x, y = frontier.pop()
+            for point in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+                if point not in reachable and point in by_coordinate and by_coordinate[point] not in blocked:
+                    reachable.add(point)
+                    frontier.append(point)
+
+    targets = []
+    if condition_type == 'all_wheat_harvested':
+        targets = [point for point, tile in by_coordinate.items() if tile == 'wheat']
+    elif condition_type == 'reach_position':
+        targets = [(condition.get('x'), condition.get('y'))]
+    if any(target not in reachable for target in targets):
+        errors.append('Level is unsolvable: an objective tile cannot be reached from drone_start.')
     return errors
 
 

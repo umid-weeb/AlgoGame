@@ -1,5 +1,5 @@
 .app-container {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   background: #0b0f0e;
@@ -107,6 +107,7 @@
   flex: 1;
   display: grid;
   grid-template-columns: minmax(360px, 430px) minmax(0, 1fr);
+  overflow: hidden;
 }
 
 .left-panel {
@@ -115,24 +116,13 @@
   flex-direction: column;
   border-right: 1px solid #26332d;
   background: #0e1411;
+  overflow: hidden;
 }
 
 .panel-heading {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  padding: 20px 20px 12px;
-}
-
-.panel-heading > div {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.panel-hint {
-  color: #617168;
-  font-size: 11px;
+  justify-content: flex-end;
+  padding: 12px 16px 0;
 }
 
 .info-button {
@@ -184,6 +174,7 @@
   gap: 14px;
   padding: 20px;
   background: #0b0f0e;
+  overflow: auto;
 }
 
 @media (max-width: 900px) {

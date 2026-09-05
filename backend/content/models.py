@@ -98,7 +98,7 @@ class Level(models.Model):
 
     # Game constraints
     max_lives = models.PositiveSmallIntegerField(default=3)
-    max_steps = models.PositiveIntegerField(default=200)
+    max_steps = models.PositiveIntegerField(default=1000)
 
     # Scoring
     stars_thresholds = models.JSONField(
