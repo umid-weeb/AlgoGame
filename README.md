@@ -1,13 +1,181 @@
-# DroneCode - Educational Programming Game Platform
+# AlgoGame / DroneCode
 
-A modern, production-ready platform for learning Python programming through interactive drone simulation games. Built with Django, React, and Pyodide.
+Python o‘rganish uchun dron boshqariladigan interaktiv ta’lim platformasi.
+
+## Bu loyiha nima?
+
+AlgoGame foydalanuvchiga Python kod yozib, grid xaritadagi dronni boshqarish imkonini beradi. Har bir levelda dronning boshlang‘ich joyi, xaritadagi obyektlar, ruxsat berilgan funksiyalar va g‘alaba sharti bo‘ladi. Foydalanuvchi kod yozadi, `Run` tugmasini bosadi va kod natijasini animatsiya orqali ko‘radi.
+
+Platforma ikki asosiy qismdan iborat:
+
+- **Backend**: Django REST API, foydalanuvchilar, kurslar, level konfiguratsiyasi, enrollment va progress.
+- **Frontend**: React/Vite ilovasi, Python editori, PixiJS game canvas va brauzerdagi Pyodide runtime.
+
+> Hozirgi holat: MVP skeleton va asosiy game flow tayyor. Backend va frontend build tekshiruvdan o‘tgan. Server-side sandbox, payment webhooklar, avtomatik testlar va production deployment hali keyingi bosqichda.
+
+## Qanday o‘ynaladi?
+
+1. Backend va frontend serverlarini ishga tushiring.
+2. Frontendda level xaritasini oching.
+3. Code editor ichida Python kod yozing.
+4. `Run` tugmasini bosing.
+5. Dron buyruqlarni ketma-ket bajaradi.
+6. Xarita shartini bajaring: masalan, barcha bug‘doyni yig‘ish yoki kerakli koordinataga yetib borish.
+7. `Restart` bilan levelni qayta boshlang, `Stop` bilan bajarilayotgan kodni to‘xtating.
+
+Oddiy misol:
+
+```python
+move(EAST)
+harvest()
+move(EAST)
+harvest()
+```
+
+Bu kod dronni sharqqa ikki marta yurgizib, yo‘lidagi ikki bug‘doyni yig‘adi. Har bir level faqat o‘zida ko‘rsatilgan funksiyalarni qabul qiladi.
+
+## Video
+
+Video hali YouTube’ga yuklanmagan. Link tayyor bo‘lgach shu joyga qo‘ying:
+
+`Video: [YouTube demo linki bu yerga qo‘yiladi]`
+
+## Tez ishga tushirish
+
+Talablar: Python 3.10+, Node.js 18+ va npm.
+
+```bash
+git clone https://github.com/umid-weeb/AlgoGame.git
+cd AlgoGame
+
+# Terminal 1: backend
+python -m venv venv
+source venv/bin/activate
+pip install -r backend/requirements.txt
+cd backend
+python manage.py migrate
+python manage.py createsuperuser
+python manage.py runserver
+```
+
+Yangi terminalda frontendni ishga tushiring:
+
+```bash
+cd AlgoGame/frontend
+npm install
+npm run dev
+```
+
+Manzillar:
+
+- Frontend: `http://localhost:5173`
+- Backend API: `http://localhost:8000/api/`
+- Django admin: `http://localhost:8000/admin/`
+
+Pyodide birinchi ishga tushishda CDN’dan yuklanadi, shuning uchun frontend uchun internet kerak bo‘lishi mumkin.
+
+## Hozirgacha bajarilgan ishlar
+
+### Backend
+
+- Custom `User` modeli va JWT authentication.
+- `Course -> Module -> Lesson -> Level` kontent iyerarxiyasi.
+- Billing modellari: `Transaction` va `Enrollment`.
+- Progress modellari: level progress va submission history.
+- DRF serializer, ViewSet, router va access permissionlar.
+- Django Admin orqali level JSON konfiguratsiyasi.
+- SQLite development konfiguratsiyasi va PostgreSQL uchun environment sozlamalari.
+
+### Frontend
+
+- React + Vite asosidagi SPA.
+- CodeMirror Python code editor.
+- PixiJS orqali grid va dron rendering.
+- Run/Stop/Restart boshqaruvlari.
+- Execution log, status, lives, steps va stars ko‘rsatkichlari.
+- API client va JWT token refresh logikasi.
+- Web Worker ichida Pyodide Python execution.
+
+### Game engine
+
+- Command queue asosidagi deterministik state machine.
+- `move`, `harvest`, `cut`, `shoot`, `plant` buyruqlari.
+- Chegara, collision, obyekt turi va step limit tekshiruvlari.
+- Lives va lose state.
+- `all_wheat_harvested`, `all_bombs_destroyed`, `reach_position`, `survive_n_steps` win conditionlari.
+- Step soniga qarab 1-3 stars hisoblash.
+
+### Tekshiruv natijasi
+
+```text
+Django system check: passed
+Django tests: 0 tests found
+Frontend production build: passed
+```
+
+Frontend build’da PixiJS bundle hajmi bo‘yicha warning bor, lekin build muvaffaqiyatli tugaydi.
+
+## Arxitektura qayergacha tayyor?
+
+```text
+Browser
+  ├── React UI
+  ├── CodeMirror Python editor
+  ├── Web Worker + Pyodide
+  └── GameEngine + PixiJS renderer
+          │
+          ▼
+      Django REST API
+          ├── Accounts
+          ├── Content
+          ├── Billing
+          └── Progress
+```
+
+Execution oqimi:
+
+```text
+Python code
+  -> Pyodide command queue
+  -> GameEngine validation
+  -> state update
+  -> PixiJS render
+  -> result/progress API
+```
+
+Hozirgi frontend execution client-side ishlaydi. Production uchun keyingi muhim qadam command yoki submission natijasini server-side qayta tekshiradigan sandbox va authoritative validation qo‘shishdir.
+
+## Keyingi qilinishi kerak bo‘lgan ishlar
+
+1. Sample course va sample level seed/data yaratish.
+2. Frontendni API’dan real level yuklaydigan qilish, hardcoded demo levelni olib tashlash.
+3. Backend’da submission code’ni xavfsiz server-side sandboxda qayta tekshirish.
+4. Django API, GameEngine va Python sandbox uchun testlar yozish.
+5. Click/Payme webhooklari, signature verification va idempotency qo‘shish.
+6. Rate limit, payload/output limit, audit log va monitoring qo‘shish.
+7. Docker, PostgreSQL, Gunicorn va Nginx production konfiguratsiyasini qo‘shish.
+8. CI/CD, backup, HTTPS va error tracking sozlash.
+9. YouTube demo videosini yozib, yuqoridagi Video bo‘limiga link qo‘yish.
+
+## Repository hujjatlari
+
+- [SETUP.md](SETUP.md) — batafsil o‘rnatish va development qo‘llanmasi.
+- [DEVELOPMENT.md](DEVELOPMENT.md) — arxitektura va development guide.
+- [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) — bajarilgan ishlar va delivery summary.
+- [DroneCode_PRODUCTION_SKILL.md](DroneCode_PRODUCTION_SKILL.md) — production talablar.
+
+---
+
+Quyidagi bo‘limlarda to‘liq texnik ma’lumot, API endpointlar, level JSON formati va deployment tavsiyalari keltirilgan.
+
+A modern MVP platform for learning Python programming through interactive drone simulation games. Built with Django, React, and Pyodide.
 
 ## Overview
 
 DroneCode combines:
 - **Python Programming Education**: Write real Python code in an in-browser editor
 - **Interactive Game Simulation**: Control a virtual drone through grid-based levels
-- **Deterministic Game Engine**: Authoritative server-side validation of game logic
+- **Deterministic Game Engine**: Repeatable client-side validation with a server-side validation roadmap
 - **Django LMS**: Course management, progress tracking, and enrollment system
 - **Secure Code Execution**: Python code runs isolated in web workers using Pyodide
 
@@ -126,7 +294,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 2. Install dependencies:
 ```bash
-pip install -r backend/requirements/base.txt
+pip install -r backend/requirements.txt
 ```
 
 3. Initialize database:
