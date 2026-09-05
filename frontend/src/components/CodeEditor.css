@@ -49,7 +49,7 @@
 }
 
 /* CodeMirror styling */
-.code-editor :global(.cm-editor) {
+.code-editor .cm-editor {
   height: 100% !important;
   font-family: 'Fira Code', 'Courier New', monospace;
   font-size: 14px;
@@ -57,19 +57,19 @@
   color: #e0e0e0;
 }
 
-.code-editor :global(.cm-content) {
+.code-editor .cm-content {
   padding: 12px;
 }
 
-.code-editor :global(.cm-gutters) {
+.code-editor .cm-gutters {
   background-color: #1a1a1a;
   border-right: 1px solid #333;
 }
 
-.code-editor :global(.cm-cursor) {
+.code-editor .cm-cursor {
   border-left-color: #4caf50;
 }
 
-.code-editor :global(.cm-selection) {
+.code-editor .cm-selection {
   background-color: #2e4053;
 }

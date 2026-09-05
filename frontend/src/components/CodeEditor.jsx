@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react'
 import { EditorState } from '@codemirror/state'
-import { EditorView, basicSetup } from '@codemirror/view'
+import { basicSetup } from '@codemirror/basic-setup'
+import { EditorView } from '@codemirror/view'
 import { python } from '@codemirror/lang-python'
 import './CodeEditor.css'
 
