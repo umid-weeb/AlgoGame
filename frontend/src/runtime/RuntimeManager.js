@@ -88,7 +88,7 @@ async function executeUserCode(code, maxSteps, availableFuncs) {
     const executionCode = \`
 _command_queue = []
 try:
-    exec('''${userCode}''', {
+    exec('''\${userCode}''', {
         'move': move,
         'harvest': harvest,
         'cut': cut,
