@@ -1,0 +1,38 @@
+# Python
+venv/
+*.py[cod]
+__pycache__/
+*.egg-info/
+dist/
+build/
+.Python
+
+# Django
+*.db
+*.sqlite3
+db.sqlite3
+/media/
+/staticfiles/
+local_settings.py
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Node
+node_modules/
+*.log
+npm-debug.log
+yarn-error.log
+
+# Build
+frontend/dist/

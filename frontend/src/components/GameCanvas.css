@@ -1,0 +1,26 @@
+.game-canvas-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  background-color: #1a1a1a;
+  border-radius: 4px;
+  padding: 15px;
+  border: 1px solid #333;
+}
+
+.game-canvas-container h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.game-canvas {
+  flex: 1;
+  border: 2px solid #333;
+  border-radius: 4px;
+  background-color: #000;
+  display: block;
+  image-rendering: pixelated;
+}

@@ -1,0 +1,75 @@
+.code-editor-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  background-color: #0d0d0d;
+}
+
+.editor-header {
+  padding: 12px 15px;
+  border-bottom: 1px solid #333;
+  background-color: #1a1a1a;
+}
+
+.editor-header h3 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.available-functions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 12px;
+}
+
+.available-functions .label {
+  color: #999;
+  font-weight: 600;
+}
+
+.function-tag {
+  background-color: #2196f3;
+  color: white;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.code-editor {
+  flex: 1;
+  overflow: auto;
+  background-color: #0d0d0d;
+  border: 1px solid #333;
+}
+
+/* CodeMirror styling */
+.code-editor :global(.cm-editor) {
+  height: 100% !important;
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 14px;
+  background-color: #0d0d0d;
+  color: #e0e0e0;
+}
+
+.code-editor :global(.cm-content) {
+  padding: 12px;
+}
+
+.code-editor :global(.cm-gutters) {
+  background-color: #1a1a1a;
+  border-right: 1px solid #333;
+}
+
+.code-editor :global(.cm-cursor) {
+  border-left-color: #4caf50;
+}
+
+.code-editor :global(.cm-selection) {
+  background-color: #2e4053;
+}
