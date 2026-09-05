@@ -12,6 +12,7 @@ function App() {
   const [level, setLevel] = useState(null)
   const [gameEngine, setGameEngine] = useState(null)
   const [runtimeManager, setRuntimeManager] = useState(null)
+  const [runtimeReady, setRuntimeReady] = useState(false)
   const [code, setCode] = useState('')
   const [gameState, setGameState] = useState(null)
   const [isRunning, setIsRunning] = useState(false)
@@ -22,12 +23,8 @@ function App() {
   useEffect(() => {
     const init = async () => {
       try {
-        const runtime = new RuntimeManager()
-        await runtime.initialize()
-        setRuntimeManager(runtime)
-
-        // Load a sample level for demonstration
-        // In production, this would come from URL or props
+        // Load the level before the remote Pyodide runtime so the UI is usable
+        // while the runtime is loading.
         const sampleLevel = {
           id: 1,
           title: 'Sample Level',
@@ -54,8 +51,13 @@ function App() {
         const engine = new GameEngine(sampleLevel)
         setGameEngine(engine)
         setGameState(engine.getState())
+
+        const runtime = new RuntimeManager()
+        await runtime.initialize()
+        setRuntimeManager(runtime)
+        setRuntimeReady(true)
       } catch (err) {
-        setError(`Initialization failed: ${err.message}`)
+        setError(`Python runtime is not ready: ${err.message}`)
         console.error(err)
       }
     }
@@ -71,7 +73,10 @@ function App() {
    * Run the code
    */
   const handleRun = async () => {
-    if (!runtimeManager || !gameEngine) return
+    if (!runtimeReady || !runtimeManager || !gameEngine) {
+      setError('Python runtime is still loading. Please wait a moment and try again.')
+      return
+    }
 
     setIsRunning(true)
     setError(null)
@@ -143,9 +148,33 @@ function App() {
 
   return (
     <div className="app-container">
-      <div className="left-panel">
+      <header className="app-header">
+        <div className="brand-lockup">
+          <span className="brand-mark">DC</span>
+          <div>
+            <strong>DroneCode</strong>
+            <span>Python flight school</span>
+          </div>
+        </div>
+        <div className="level-heading">
+          <span>MISSION 01</span>
+          <strong>{level?.title || 'Loading mission...'}</strong>
+        </div>
+        <div className={`runtime-pill ${runtimeReady ? 'ready' : 'loading'}`}>
+          <span className="runtime-dot" />
+          {runtimeReady ? 'Python ready' : 'Loading Python'}
+        </div>
+      </header>
+
+      <main className="app-main">
+        <div className="left-panel">
+          <div className="panel-heading">
+            <span className="eyebrow">MISSION CONTROL</span>
+            <span className="panel-hint">Write your flight plan</span>
+          </div>
         <GameToolbar
           isRunning={isRunning}
+          runtimeReady={runtimeReady}
           onRun={handleRun}
           onStop={handleStop}
           onRestart={handleRestart}
@@ -157,6 +186,10 @@ function App() {
           availableFunctions={level?.available_functions || []}
           disabled={isRunning}
         />
+          <div className="editor-footer">
+            <span>Python 3</span>
+            <span>Max {level?.max_steps || 0} steps</span>
+          </div>
       </div>
 
       <div className="right-panel">
@@ -172,6 +205,7 @@ function App() {
           error={error}
         />
       </div>
+      </main>
     </div>
   )
 }

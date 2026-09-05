@@ -1,18 +1,16 @@
 .game-toolbar {
   display: flex;
-  gap: 10px;
-  padding: 15px;
-  background-color: #1a1a1a;
-  border-bottom: 1px solid #333;
-  height: 40px;
+  gap: 8px;
+  padding: 0 20px 16px;
+  background-color: #0e1411;
   align-items: center;
 }
 
 .btn {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 4px;
-  font-size: 14px;
+  padding: 9px 13px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
@@ -22,33 +20,32 @@
 }
 
 .btn-play {
-  background-color: #4caf50;
-  color: white;
+  background-color: #d7f36b;
+  color: #17200f;
 }
 
 .btn-play:hover:not(:disabled) {
-  background-color: #45a049;
-  transform: scale(1.05);
+  background-color: #e3ff88;
 }
 
 .btn-stop {
-  background-color: #f44336;
-  color: white;
+  background-color: transparent;
+  border-color: #6b3939;
+  color: #ef8f87;
 }
 
 .btn-stop:hover:not(:disabled) {
-  background-color: #da190b;
-  transform: scale(1.05);
+  background-color: #3a1f20;
 }
 
 .btn-restart {
-  background-color: #2196f3;
-  color: white;
+  background-color: #17231e;
+  border-color: #385044;
+  color: #b9d1c0;
 }
 
 .btn-restart:hover:not(:disabled) {
-  background-color: #0b7dda;
-  transform: scale(1.05);
+  background-color: #20342a;
 }
 
 .btn:disabled {
