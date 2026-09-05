@@ -18,6 +18,8 @@ export class GameEngine {
         x: this.levelData.drone_start.x,
         y: this.levelData.drone_start.y,
         facing: this.levelData.drone_start.facing,
+        altitude: 0,
+        airborne: false,
       },
     };
 
@@ -86,6 +88,18 @@ export class GameEngine {
         break;
       case 'plant':
         this.executePlant(command.entity);
+        break;
+      case 'takeoff':
+        this.executeTakeoff();
+        break;
+      case 'land':
+        this.executeLand();
+        break;
+      case 'turn':
+        this.executeTurn(command.direction);
+        break;
+      case 'hover':
+        this.log.push('Drone is hovering in place');
         break;
       default:
         this.addError(`Unknown command: ${command.type}`);
@@ -217,6 +231,34 @@ export class GameEngine {
 
     cell.type = entityType;
     this.log.push(`Planted ${entityType} at (${this.world.drone.x}, ${this.world.drone.y})`);
+  }
+
+  executeTakeoff() {
+    if (this.world.drone.airborne) {
+      this.addError('Drone is already airborne');
+      return;
+    }
+    this.world.drone.airborne = true;
+    this.world.drone.altitude = 2;
+    this.log.push('Drone took off');
+  }
+
+  executeLand() {
+    if (!this.world.drone.airborne) {
+      this.addError('Drone is already on the ground');
+      return;
+    }
+    this.world.drone.airborne = false;
+    this.world.drone.altitude = 0;
+    this.log.push(`Drone landed at (${this.world.drone.x}, ${this.world.drone.y})`);
+  }
+
+  executeTurn(direction) {
+    const order = GameEngine.DIRECTION_NAMES;
+    const current = order.indexOf(this.world.drone.facing);
+    const offset = direction === 'right' ? 1 : -1;
+    this.world.drone.facing = order[(current + offset + order.length) % order.length];
+    this.log.push(`Drone turned ${direction}, facing ${this.world.drone.facing}`);
   }
 
   /**

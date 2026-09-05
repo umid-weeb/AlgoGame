@@ -63,6 +63,21 @@ def shoot():
 def plant(entity='wheat'):
     _command_queue.append({'type': 'plant', 'entity': entity})
 
+def takeoff():
+  _command_queue.append({'type': 'takeoff'})
+
+def land():
+  _command_queue.append({'type': 'land'})
+
+def turn_left():
+  _command_queue.append({'type': 'turn', 'direction': 'left'})
+
+def turn_right():
+  _command_queue.append({'type': 'turn', 'direction': 'right'})
+
+def hover():
+  _command_queue.append({'type': 'hover'})
+
 def get_commands():
     return _command_queue
 
@@ -94,6 +109,11 @@ try:
         'cut': cut,
         'shoot': shoot,
         'plant': plant,
+        'takeoff': takeoff,
+        'land': land,
+        'turn_left': turn_left,
+        'turn_right': turn_right,
+        'hover': hover,
         'get_commands': get_commands,
         'NORTH': NORTH,
         'SOUTH': SOUTH,
@@ -109,7 +129,9 @@ except Exception as e:
 
     pyodide.runPython(executionCode);
     
-    const resultCommands = pyodide.globals.get('result_commands').toJs();
+    const resultCommands = pyodide.globals.get('result_commands').toJs({
+      dict_converter: Object.fromEntries,
+    });
     const resultError = pyodide.globals.get('result_error');
 
     return {

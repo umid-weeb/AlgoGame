@@ -124,8 +124,44 @@
   padding: 20px 20px 12px;
 }
 
+.panel-heading > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
 .panel-hint {
   color: #617168;
+  font-size: 11px;
+}
+
+.info-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 9px;
+  border: 1px solid #385344;
+  border-radius: 5px;
+  background: #15231a;
+  color: #bdd678;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.info-button:hover {
+  border-color: #d7f36b;
+  background: #1d3223;
+}
+
+.info-button span {
+  display: grid;
+  width: 15px;
+  height: 15px;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-family: Georgia, serif;
   font-size: 11px;
 }
 

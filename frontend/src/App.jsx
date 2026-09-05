@@ -4,6 +4,7 @@ import CodeEditor from './components/CodeEditor'
 import GameCanvas from './components/GameCanvas'
 import GameToolbar from './components/GameToolbar'
 import GameStatus from './components/GameStatus'
+import FlightInfo from './components/FlightInfo'
 import { GameEngine } from './engine/GameEngine'
 import RuntimeManager from './runtime/RuntimeManager'
 import apiClient from './api/client'
@@ -18,6 +19,8 @@ function App() {
   const [isRunning, setIsRunning] = useState(false)
   const [executionLog, setExecutionLog] = useState([])
   const [error, setError] = useState(null)
+  const [showFlightInfo, setShowFlightInfo] = useState(false)
+  const [language, setLanguage] = useState('uz')
 
   // Initialize runtime manager and load default level
   useEffect(() => {
@@ -37,8 +40,8 @@ function App() {
             { x: 2, y: 1, type: 'bomb' },
           ],
           drone_start: { x: 0, y: 0, facing: 'east' },
-          available_functions: ['move', 'harvest', 'shoot'],
-          starter_code: 'move(EAST)\nharvest()',
+          available_functions: ['move', 'takeoff', 'land', 'turn_left', 'turn_right', 'hover', 'harvest', 'cut', 'shoot', 'plant'],
+          starter_code: 'def harvest_route():\n    takeoff()\n    move(EAST)\n    harvest()\n    move(EAST)\n    harvest()\n    land()\n\nharvest_route()',
           win_condition: { type: 'all_wheat_harvested' },
           max_lives: 3,
           max_steps: 50,
@@ -169,8 +172,13 @@ function App() {
       <main className="app-main">
         <div className="left-panel">
           <div className="panel-heading">
-            <span className="eyebrow">MISSION CONTROL</span>
-            <span className="panel-hint">Write your flight plan</span>
+            <div>
+              <span className="eyebrow">MISSION CONTROL</span>
+              <span className="panel-hint">Write your flight plan</span>
+            </div>
+            <button className="info-button" type="button" onClick={() => setShowFlightInfo(true)}>
+              <span>i</span> Info
+            </button>
           </div>
         <GameToolbar
           isRunning={isRunning}
@@ -206,6 +214,13 @@ function App() {
         />
       </div>
       </main>
+      {showFlightInfo && (
+        <FlightInfo
+          language={language}
+          onLanguageChange={setLanguage}
+          onClose={() => setShowFlightInfo(false)}
+        />
+      )}
     </div>
   )
 }

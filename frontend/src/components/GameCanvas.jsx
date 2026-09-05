@@ -70,7 +70,9 @@ export default function GameCanvas({ gameState, levelData, width = 800, height =
       particles.rotation.y = elapsed * 0.025
       particles.position.y = Math.sin(elapsed * 0.4) * 0.15
       if (droneRef.current) {
-        droneRef.current.position.y = 1.25 + Math.sin(elapsed * 3) * 0.08
+        const targetAltitude = stateRef.current?.drone?.altitude || 0
+        const hoverHeight = targetAltitude > 0 ? 1.25 + targetAltitude * 0.45 : 0.72
+        droneRef.current.position.y = hoverHeight + Math.sin(elapsed * 3) * (targetAltitude > 0 ? 0.08 : 0.025)
         rotorRef.current.forEach((rotor) => { rotor.rotation.y += 0.45 })
         droneRef.current.getObjectByName('signal').material.emissiveIntensity = 2 + Math.sin(elapsed * 5)
       }
@@ -205,7 +207,7 @@ function createDrone(scene) {
   const drone = new THREE.Group()
   drone.name = 'drone'
   drone.scale.setScalar(1.35)
-  drone.position.set(-TILE_SIZE, 1.25, -TILE_SIZE / 2)
+  drone.position.set(-TILE_SIZE, 0.72, -TILE_SIZE / 2)
   const body = new THREE.Mesh(
     new THREE.BoxGeometry(0.9, 0.3, 0.65),
     new THREE.MeshStandardMaterial({ color: 0xe8fbff, emissive: 0x2c91ad, emissiveIntensity: 0.45, metalness: 0.7, roughness: 0.25 })
