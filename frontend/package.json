@@ -16,10 +16,10 @@
     "@reduxjs/toolkit": "^2.12.0",
     "axios": "^1.20.0",
     "codemirror": "^6.0.2",
-    "pixi.js": "^8.20.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-redux": "^9.3.0"
+    "react-redux": "^9.3.0",
+    "three": "^0.185.1"
   },
   "devDependencies": {
     "@types/react": "^19.2.18",

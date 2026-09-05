@@ -4,28 +4,118 @@
   gap: 12px;
   flex: 1;
   min-height: 0;
-  background-color: #101714;
+  background: radial-gradient(circle at 70% 20%, #14313b 0%, #101b22 42%, #0d151a 100%);
   border-radius: 10px;
   padding: 16px;
   border: 1px solid #26332d;
 }
 
-.game-canvas-container h3 {
+.scene-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.scene-kicker {
+  display: block;
+  margin-bottom: 4px;
+  color: #75bbc0;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.6px;
+}
+
+.scene-heading h3 {
   margin: 0;
-  font-size: 14px;
+  color: #e4f4ed;
+  font-size: 16px;
   font-weight: 600;
-  color: #dce8df;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
+}
+
+.scene-stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #91a9a0;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.scene-stats b {
+  color: #d7f36b;
+}
+
+.scene-status {
+  padding: 5px 8px;
+  border: 1px solid #39564a;
+  border-radius: 999px;
+  color: #b9d1c0;
+  text-transform: uppercase;
+}
+
+.scene-status.won {
+  border-color: #91b84c;
+  color: #d7f36b;
+}
+
+.scene-status.lost {
+  border-color: #9c4a59;
+  color: #ff9eb0;
+}
+
+.scene-viewport {
+  position: relative;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+  border: 1px solid rgba(112, 215, 220, 0.24);
+  border-radius: 7px;
+  background: #071018;
+  box-shadow: inset 0 0 50px rgba(37, 205, 205, 0.08), 0 14px 30px rgba(0, 0, 0, 0.22);
 }
 
 .game-canvas {
-  flex: 1;
   width: 100%;
   height: 100%;
-  min-height: 300px;
-  border: 1px solid #304139;
-  border-radius: 6px;
-  background-color: #000;
+  min-height: 330px;
   display: block;
-  image-rendering: pixelated;
+  cursor: grab;
+}
+
+.game-canvas:active {
+  cursor: grabbing;
+}
+
+.scene-help {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  padding: 5px 8px;
+  border: 1px solid rgba(147, 219, 211, 0.2);
+  border-radius: 4px;
+  background: rgba(7, 16, 24, 0.72);
+  color: #8ba9a3;
+  font-size: 10px;
+  pointer-events: none;
+}
+
+.scene-help span {
+  margin: 0 4px;
+  color: #d7f36b;
+}
+
+@media (max-width: 520px) {
+  .scene-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .scene-stats {
+    width: 100%;
+    justify-content: space-between;
+  }
 }
