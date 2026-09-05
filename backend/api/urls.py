@@ -23,6 +23,7 @@ urlpatterns = [
     path('auth/register/', RegisterView.as_view(), name='register'),
     path('auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('ai/', include('ai.urls', namespace='ai')),
 
     # Router endpoints
     path('', include(router.urls)),

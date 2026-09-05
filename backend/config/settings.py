@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'billing.apps.BillingConfig',
     'progress.apps.ProgressConfig',
     'api.apps.ApiConfig',
+    'ai.apps.AIConfig',
 ]
 
 MIDDLEWARE = [
