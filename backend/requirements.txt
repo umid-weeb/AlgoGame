@@ -10,4 +10,4 @@ gunicorn==21.2.0
 whitenoise==6.6.0
 celery==5.3.4
 redis==5.0.1
-django-celery-beat==2.5.0
+django-celery-beat==2.7.0

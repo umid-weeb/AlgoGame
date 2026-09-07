@@ -3,6 +3,8 @@ import os
 import urllib.error
 import urllib.request
 
+from decouple import config as environment_config
+
 from .models import AIProviderConfig
 
 
@@ -30,7 +32,9 @@ class AIServiceError(Exception):
 class ProviderClient:
     def __init__(self, config):
         self.config = config
-        self.api_key = os.getenv(config.api_key_env, '')
+        # `python-decouple` loads backend/.env for local development, while
+        # os.getenv keeps deployment-secret-manager environments supported.
+        self.api_key = os.getenv(config.api_key_env) or environment_config(config.api_key_env, default='')
         if not self.api_key:
             raise AIServiceError(f'Missing API key environment variable: {config.api_key_env}')
 
